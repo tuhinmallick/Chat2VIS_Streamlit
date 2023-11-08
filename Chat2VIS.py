@@ -27,7 +27,7 @@ st.sidebar.markdown("<h4  style='text-align: center;font-size:small;color:grey;p
                  Large Language Models </h4>", unsafe_allow_html=True)
 
 st.sidebar.caption("(https://doi.org/10.1109/ACCESS.2023.3274199)")
-                 
+
 st.sidebar.markdown("<h4  style='text-align:center;font-size:small;color:grey;padding-top: 0rem;padding-bottom: .2rem;'>Chat2VIS: Fine-Tuning Data Visualisations using Multilingual \
 Natural Language Text and Pre-Trained Large Language Models </h4>", unsafe_allow_html=True)
 
@@ -41,9 +41,7 @@ available_models = {"ChatGPT-4": "gpt-4","ChatGPT-3.5": "gpt-3.5-turbo","GPT-3":
 
 # List to hold datasets
 if "datasets" not in st.session_state:
-    datasets = {}
-    # Preload datasets
-    datasets["Movies"] = pd.read_csv("movies.csv")
+    datasets = {"Movies": pd.read_csv("movies.csv")}
     datasets["Housing"] =pd.read_csv("housing.csv")
     datasets["Cars"] =pd.read_csv("cars.csv")
     datasets["Colleges"] =pd.read_csv("colleges.csv")
@@ -87,8 +85,7 @@ with st.sidebar:
         label = f"{model_desc} ({model_name})"
         key = f"key_{model_desc}"
         use_model[model_desc] = st.checkbox(label,value=True,key=key)
- 
- # Text area for query
+
 question = st.text_area(":eyes: What would you like to visualise?",height=10)
 go_btn = st.button("Go...")
 
@@ -112,7 +109,7 @@ if go_btn and model_count > 0:
         # Place for plots depending on how many models
         plots = st.columns(model_count)
         # Get the primer for this dataset
-        primer1,primer2 = get_primer(datasets[chosen_dataset],'datasets["'+ chosen_dataset + '"]') 
+        primer1,primer2 = get_primer(datasets[chosen_dataset],'datasets["'+ chosen_dataset + '"]')
         # Create model, run the request and print the results
         for plot_num, model_type in enumerate(selected_models):
             with plots[plot_num]:
@@ -128,22 +125,32 @@ if go_btn and model_count > 0:
                     print("Model: " + model_type)
                     print(answer)
                     plot_area = st.empty()
-                    plot_area.pyplot(exec(answer))           
+                    plot_area.pyplot(exec(answer))
                 except Exception as e:
                     if type(e) == openai.error.APIError:
-                        st.error("OpenAI API Error. Please try again a short time later. (" + str(e) + ")")
+                        st.error(f"OpenAI API Error. Please try again a short time later. ({str(e)})")
                     elif type(e) == openai.error.Timeout:
-                        st.error("OpenAI API Error. Your request timed out. Please try again a short time later. (" + str(e) + ")")
+                        st.error(
+                            f"OpenAI API Error. Your request timed out. Please try again a short time later. ({str(e)})"
+                        )
                     elif type(e) == openai.error.RateLimitError:
-                        st.error("OpenAI API Error. You have exceeded your assigned rate limit. (" + str(e) + ")")
+                        st.error(
+                            f"OpenAI API Error. You have exceeded your assigned rate limit. ({str(e)})"
+                        )
                     elif type(e) == openai.error.APIConnectionError:
-                        st.error("OpenAI API Error. Error connecting to services. Please check your network/proxy/firewall settings. (" + str(e) + ")")
+                        st.error(
+                            f"OpenAI API Error. Error connecting to services. Please check your network/proxy/firewall settings. ({str(e)})"
+                        )
                     elif type(e) == openai.error.InvalidRequestError:
-                        st.error("OpenAI API Error. Your request was malformed or missing required parameters. (" + str(e) + ")")
+                        st.error(
+                            f"OpenAI API Error. Your request was malformed or missing required parameters. ({str(e)})"
+                        )
                     elif type(e) == openai.error.AuthenticationError:
-                        st.error("Please enter a valid OpenAI API Key. (" + str(e) + ")")
+                        st.error(f"Please enter a valid OpenAI API Key. ({str(e)})")
                     elif type(e) == openai.error.ServiceUnavailableError:
-                        st.error("OpenAI Service is currently unavailable. Please try again a short time later. (" + str(e) + ")")               
+                        st.error(
+                            f"OpenAI Service is currently unavailable. Please try again a short time later. ({str(e)})"
+                        )
                     else:
                         st.error("Unfortunately the code generated from the model contained errors and was unable to execute.")
 
