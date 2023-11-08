@@ -8,25 +8,29 @@ import openai
 from langchain import HuggingFaceHub, LLMChain,PromptTemplate
 
 def run_request(question_to_ask, model_type, key, alt_key):
-    if model_type == "gpt-4" or model_type == "gpt-3.5-turbo" :
+    if model_type in ["gpt-4", "gpt-3.5-turbo"]:
         # Run OpenAI ChatCompletion API
         task = "Generate Python Code Script."
         if model_type == "gpt-4":
             # Ensure GPT-4 does not include additional comments
-            task = task + " The script should only include code, no comments."
+            task += " The script should only include code, no comments."
         openai.api_key = key
         response = openai.ChatCompletion.create(model=model_type,
             messages=[{"role":"system","content":task},{"role":"user","content":question_to_ask}])
         llm_response = response["choices"][0]["message"]["content"]
-    elif model_type == "text-davinci-003" or model_type == "gpt-3.5-turbo-instruct":
+    elif model_type in ["text-davinci-003", "gpt-3.5-turbo-instruct"]:
         # Run OpenAI Completion API
         openai.api_key = key
         response = openai.Completion.create(engine=model_type,prompt=question_to_ask,temperature=0,max_tokens=500,
                     top_p=1.0,frequency_penalty=0.0,presence_penalty=0.0,stop=["plt.show()"])
-        llm_response = response["choices"][0]["text"] 
+        llm_response = response["choices"][0]["text"]
     else:
         # Hugging Face model
-        llm = HuggingFaceHub(huggingfacehub_api_token = alt_key, repo_id="codellama/" + model_type, model_kwargs={"temperature":0.1, "max_new_tokens":500})
+        llm = HuggingFaceHub(
+            huggingfacehub_api_token=alt_key,
+            repo_id=f"codellama/{model_type}",
+            model_kwargs={"temperature": 0.1, "max_new_tokens": 500},
+        )
         llm_prompt = PromptTemplate.from_template(question_to_ask)
         llm_chain = LLMChain(llm=llm,prompt=llm_prompt)
         llm_response = llm_chain.predict()
@@ -38,12 +42,12 @@ def format_response( res):
     # Remove the load_csv from the answer if it exists
     csv_line = res.find("read_csv")
     if csv_line > 0:
-        return_before_csv_line = res[0:csv_line].rfind("\n")
+        return_before_csv_line = res[:csv_line].rfind("\n")
         if return_before_csv_line == -1:
             # The read_csv line is the first line so there is nothing to need before it
             res_before = ""
         else:
-            res_before = res[0:return_before_csv_line]
+            res_before = res[:return_before_csv_line]
         res_after = res[csv_line:]
         return_after_csv_line = res_after.find("\n")
         if return_after_csv_line == -1:
@@ -75,14 +79,16 @@ def get_primer(df_dataset,df_name):
         if len(df_dataset[i].drop_duplicates()) < 20 and df_dataset.dtypes[i]=="O":
             primer_desc = primer_desc + "\nThe column '" + i + "' has categorical values '" + \
                 "','".join(str(x) for x in df_dataset[i].drop_duplicates()) + "'. "
-        elif df_dataset.dtypes[i]=="int64" or df_dataset.dtypes[i]=="float64":
-            primer_desc = primer_desc + "\nThe column '" + i + "' is type " + str(df_dataset.dtypes[i]) + " and contains numeric values. "   
+        elif df_dataset.dtypes[i] in ["int64", "float64"]:
+            primer_desc = primer_desc + "\nThe column '" + i + "' is type " + str(df_dataset.dtypes[i]) + " and contains numeric values. "
     primer_desc = primer_desc + "\nLabel the x and y axes appropriately."
     primer_desc = primer_desc + "\nAdd a title. Set the fig suptitle as empty."
     primer_desc = primer_desc + "{}" # Space for additional instructions if needed
     primer_desc = primer_desc + "\nUsing Python version 3.9.12, create a script using the dataframe df to graph the following: "
-    pimer_code = "import pandas as pd\nimport matplotlib.pyplot as plt\n"
-    pimer_code = pimer_code + "fig,ax = plt.subplots(1,1,figsize=(10,4))\n"
-    pimer_code = pimer_code + "ax.spines['top'].set_visible(False)\nax.spines['right'].set_visible(False) \n"
-    pimer_code = pimer_code + "df=" + df_name + ".copy()\n"
+    pimer_code = (
+        "import pandas as pd\nimport matplotlib.pyplot as plt\n"
+        + "fig,ax = plt.subplots(1,1,figsize=(10,4))\n"
+    )
+    pimer_code += "ax.spines['top'].set_visible(False)\nax.spines['right'].set_visible(False) \n"
+    pimer_code = f"{pimer_code}df={df_name}" + ".copy()\n"
     return primer_desc,pimer_code
